@@ -1,0 +1,82 @@
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 20px;
+        max-width: 900px;
+        margin: auto;
+        background-color: #f9fafa;
+        color: #333;
+    }
+
+    h1, h2, h3 {
+        text-align: center;
+        color: #2c3e50;
+        margin-bottom: 20px;
+    }
+
+    a, a:visited {
+        text-decoration: none;
+    }
+
+    button {
+        background-color: #3498db;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 15px;
+        margin: 10px 0;
+        transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+        background-color: #2980b9;
+    }
+
+    .registro {
+        background-color: white;
+        border: 1px solid #ddd;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    ul {
+        padding-left: 20px;
+        margin-top: 10px;
+    }
+
+    li {
+        margin-bottom: 5px;
+    }
+
+    .info-label {
+        font-weight: bold;
+    }
+
+    .no-data {
+        text-align: center;
+        font-style: italic;
+        color: #777;
+        margin-top: 30px;
+    }
+
+    /* Cabeçalho fixo opcional */
+    .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #ecf0f1;
+        padding: 10px 20px;
+        margin-bottom: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .topbar h1 {
+        margin: 0;
+        color: #2c3e50;
+        font-size: 24px;
+    }
