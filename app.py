@@ -1,7 +1,43 @@
 from flask import Flask, render_template, request, redirect
 from collections import defaultdict
-
+from dotenv import load_dotenv
+load_dotenv() 
+from flask_sqlalchemy import SQLAlchemy
+import os
 app = Flask(__name__)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+from datetime import datetime
+
+class ItemEstoque(db.Model):
+    __tablename__ = 'itens_estoque'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(50), nullable=False, unique=True)
+    quantidade_inicial = db.Column(db.Integer, default=0)
+    quantidade_atual = db.Column(db.Integer, default=0)
+
+class Registro(db.Model):
+    __tablename__ = 'registros'
+    id = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.String(20))  # retirada ou devolucao
+    nome = db.Column(db.String(100))
+    chapa = db.Column(db.String(20))
+    area = db.Column(db.String(100))
+    ordem = db.Column(db.String(100))
+    data = db.Column(db.DateTime, default=datetime.utcnow)
+    itens = db.relationship("ItemRegistro", backref="registro", cascade="all, delete-orphan")
+
+class ItemRegistro(db.Model):
+    __tablename__ = 'itens_registro'
+    id = db.Column(db.Integer, primary_key=True)
+    registro_id = db.Column(db.Integer, db.ForeignKey('registros.id'))
+    nome_item = db.Column(db.String(50))
+    quantidade = db.Column(db.Integer)
+
+
+
 
 estoque_inicial = {}
 estoque_atual = {}
