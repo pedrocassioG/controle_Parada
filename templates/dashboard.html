@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard de Extravio</title>
+    <style>
+        body { font-family: Arial; max-width: 900px; margin: auto; padding: 20px; }
+        h1 { color: #27ae60; }
+        .section { margin-bottom: 30px; }
+        .card { background: #f9f9f9; border: 1px solid #ccc; padding: 15px; border-radius: 10px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Dashboard de Extravio</h1>
+    <a href="/"><button>Voltar</button></a>
+
+    <div class="section">
+        <h2>Estoque</h2>
+        <div class="card">
+            <strong>Inicial:</strong>
+            <ul>
+                {% for item, qtd in estoque_inicial.items() %}
+                    <li>{{ item }}: {{ qtd }}</li>
+                {% endfor %}
+            </ul>
+            <strong>Final:</strong>
+            <ul>
+                {% for item, qtd in estoque_final.items() %}
+                    <li>{{ item }}: {{ qtd }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Resumo de Extravio</h2>
+        <ul>
+            {% for item, qtd in extraviados.items() %}
+                <li>{{ item }}: {{ qtd }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Área com Mais Extravio</h2>
+        <div class="card">{{ area_top }}</div>
+    </div>
+
+    <div class="section">
+        <h2>Detalhes por Pessoa</h2>
+        {% for p in pessoas %}
+            <div class="card">
+                <strong>Nome:</strong> {{ p.nome }}<br>
+                <strong>Chapa:</strong> {{ p.chapa }}<br>
+                <strong>Área:</strong> {{ p.area }}<br>
+                <strong>Ordem:</strong> {{ p.ordem }}<br>
+                <strong>Faltando:</strong>
+                <ul>
+                    {% for item, qtd in p.faltando.items() %}
+                        <li>{{ item }}: {{ qtd }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Retiradas Ativas</title>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 800px; margin: auto; }
+        h1 { color: #2980b9; }
+        .registro { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Retiradas Ativas</h1>
+    <a href="/"><button>Voltar</button></a>
+
+    {% if retiradas %}
+        {% for r in retiradas %}
+            <div class="registro">
+                <strong>Nome:</strong> {{ r.nome }}<br>
+                <strong>Chapa:</strong> {{ r.chapa }}<br>
+                <strong>Área:</strong> {{ r.area }}<br>
+                <strong>Ordem:</strong> {{ r.ordem }}<br>
+                <strong>Itens Ativos:</strong>
+                <ul>
+                    {% for item, qtd in r.ativos.items() %}
+                        <li>{{ item }}: {{ qtd }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>Nenhuma retirada pendente de devolução.</p>
+    {% endif %}
+</body>
+</html>

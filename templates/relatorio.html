@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório de Extravio</title>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 800px; margin: auto; }
+        h1 { color: #c0392b; }
+        .registro { border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Relatório de Extravio</h1>
+    <a href="/"><button>Voltar</button></a>
+
+    <h2>Itens Extraviados</h2>
+    <ul>
+        {% for item, qtd in extraviados.items() %}
+            <li>{{ item }}: {{ qtd }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Pessoas que não devolveram</h2>
+    {% for p in pessoas %}
+        <div class="registro">
+            <strong>Nome:</strong> {{ p.nome }}<br>
+            <strong>Chapa:</strong> {{ p.chapa }}<br>
+            <strong>Área:</strong> {{ p.area }}<br>
+            <strong>Ordem:</strong> {{ p.ordem }}<br>
+            <strong>Faltando:</strong>
+            <ul>
+                {% for item, qtd in p.faltando.items() %}
+                    <li>{{ item }}: {{ qtd }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endfor %}
+</body>
+</html>

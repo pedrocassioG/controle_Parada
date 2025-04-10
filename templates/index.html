@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Controle de Estoque - Parada</title>
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: auto; padding: 20px; }
+        input, button, select { margin: 5px 0; padding: 5px; width: 100%; }
+        form { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 10px; }
+        h2 { color: #2c3e50; }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
+        .btn-group button { flex: 1; padding: 10px; }
+        .reset-button {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            width: 100%;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Controle de Estoque - Parada</h1>
+    {% if mensagem %}
+  <div style="background-color: #ffdddd; color: #a94442; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+    {{ mensagem }}
+  </div>
+{% endif %}
+
+
+    <form method="POST">
+        <h2>1. Editar Estoque Inicial</h2>
+        <input type="hidden" name="tipo" value="estoque">
+        <label>Refletores: <input type="number" name="Refletores" required></label>
+        <label>Extensões: <input type="number" name="Extensões" required></label>
+        <label>Exaustores: <input type="number" name="Exaustores" required></label>
+        <button type="submit">Atualizar Estoque</button>
+    </form>
+
+    <form method="POST">
+        <h2>2. Registrar Retirada</h2>
+        <input type="hidden" name="tipo" value="retirada">
+        <label>Nome: <input type="text" name="nome" required></label>
+        <label>Chapa: <input type="text" name="chapa" required></label>
+        <label>Área: <input type="text" name="area" required></label>
+        <label>Ordem de Manutenção: <input type="text" name="ordem" required></label>
+        <label>Refletores: <input type="number" name="Refletores"></label>
+        <label>Extensões: <input type="number" name="Extensões"></label>
+        <label>Exaustores: <input type="number" name="Exaustores"></label>
+        <button type="submit">Registrar Retirada</button>
+    </form>
+
+    <form method="POST">
+        <h2>3. Registrar Devolução</h2>
+        <input type="hidden" name="tipo" value="devolucao">
+        <label>Nome: <input type="text" name="nome" required></label>
+        <label>Chapa: <input type="text" name="chapa" required></label>
+        <label>Área: <input type="text" name="area" required></label>
+        <label>Ordem de Manutenção: <input type="text" name="ordem" required></label>
+        <label>Refletores: <input type="number" name="Refletores"></label>
+        <label>Extensões: <input type="number" name="Extensões"></label>
+        <label>Exaustores: <input type="number" name="Exaustores"></label>
+        <button type="submit">Registrar Devolução</button>
+    </form>
+
+    <div class="btn-group">
+        <a href="/finalizar"><button type="button">Parada Finalizada</button></a>
+        <a href="/dashboard"><button type="button">Ver Dashboard</button></a>
+        <a href="/retiradas_ativas"><button type="button">Ver Retiradas Ativas</button></a>
+    </div>
+
+    <!-- Botão para zerar tudo -->
+    <form action="/resetar" method="post" onsubmit="return confirm('Tem certeza que deseja zerar todo o histórico?');">
+        <button type="submit" class="reset-button">Zerar Histórico</button>
+    </form>
+
+    <h3>Estoque Atual:</h3>
+    <ul>
+        {% for item, qtd in estoque.items() %}
+            <li>{{ item }}: {{ qtd }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
