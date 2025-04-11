@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Devoluções Registradas</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        h1 { color: #2c3e50; }
+        .registro { border: 1px solid #ccc; padding: 15px; margin-bottom: 10px; border-radius: 8px; }
+        ul { margin: 0; padding-left: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Devoluções Registradas</h1>
+    <a href="/" style="display:inline-block; margin-bottom: 15px;">← Voltar</a>
+    
+    {% for r in registros %}
+        <div class="registro">
+            <strong>Nome:</strong> {{ r.nome }}<br>
+            <strong>Chapa:</strong> {{ r.chapa }}<br>
+            <strong>Área:</strong> {{ r.area }}<br>
+            <strong>Ordem:</strong> {{ r.ordem }}<br>
+            <strong>Data:</strong> {{ r.data.strftime("%d/%m/%Y %H:%M") }}<br>
+            <strong>Itens Devolvidos:</strong>
+            <ul>
+                {% for item in r.itens %}
+                    <li>{{ item.nome_item }}: {{ item.quantidade }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endfor %}
+</body>
+</html>

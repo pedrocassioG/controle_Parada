@@ -22,17 +22,15 @@
             font-weight: bold;
         }
     </style>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
 </head>
 <body>
     <h1>Controle de Estoque - Parada</h1>
-    {% if mensagem %}
-  <div style="background-color: #ffdddd; color: #a94442; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
-    {{ mensagem }}
-  </div>
-{% endif %}
 
+    {% if mensagem %}
+    <div style="background-color: #ffdddd; color: #a94442; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+        {{ mensagem }}
+    </div>
+    {% endif %}
 
     <form method="POST">
         <h2>1. Editar Estoque Inicial</h2>
@@ -70,20 +68,20 @@
     </form>
 
     <div class="btn-group">
+        <a href="/devolucoes"><button type="button">Ver Devoluções</button></a>
         <a href="/finalizar"><button type="button">Parada Finalizada</button></a>
         <a href="/dashboard"><button type="button">Ver Dashboard</button></a>
         <a href="/retiradas_ativas"><button type="button">Ver Retiradas Ativas</button></a>
     </div>
 
-    <!-- Botão para zerar tudo -->
     <form action="/resetar" method="post" onsubmit="return confirm('Tem certeza que deseja zerar todo o histórico?');">
         <button type="submit" class="reset-button">Zerar Histórico</button>
     </form>
 
     <h3>Estoque Atual:</h3>
     <ul>
-        {% for item, qtd in estoque.items() %}
-            <li>{{ item }}: {{ qtd }}</li>
+        {% for item in itens_estoque %}
+            <li>{{ item.nome }}: {{ item.quantidade_atual }}</li>
         {% endfor %}
     </ul>
 </body>

@@ -1,16 +1,29 @@
 from flask import Flask, render_template, request, redirect
 from collections import defaultdict
+from datetime import datetime
+import zoneinfo
 from dotenv import load_dotenv
-load_dotenv() 
 from flask_sqlalchemy import SQLAlchemy
 import os
+
+# Carrega variáveis de ambiente
+load_dotenv()
+
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-from datetime import datetime
 
+from datetime import datetime
+import pytz
+
+def hora_brasil():
+    utc_now = datetime.utcnow()
+    fuso_sp = pytz.timezone("America/Sao_Paulo")
+    return utc_now.replace(tzinfo=pytz.utc).astimezone(fuso_sp)
+
+# Modelos
 class ItemEstoque(db.Model):
     __tablename__ = 'itens_estoque'
     id = db.Column(db.Integer, primary_key=True)
@@ -26,7 +39,7 @@ class Registro(db.Model):
     chapa = db.Column(db.String(20))
     area = db.Column(db.String(100))
     ordem = db.Column(db.String(100))
-    data = db.Column(db.DateTime, default=datetime.utcnow)
+    data = db.Column(db.DateTime, default=lambda: hora_brasil())
     itens = db.relationship("ItemRegistro", backref="registro", cascade="all, delete-orphan")
 
 class ItemRegistro(db.Model):
@@ -36,9 +49,6 @@ class ItemRegistro(db.Model):
     nome_item = db.Column(db.String(50))
     quantidade = db.Column(db.Integer)
 
-
-
-
 estoque_inicial = {}
 estoque_atual = {}
 retiradas = []
@@ -46,92 +56,85 @@ devolucoes = []
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    global estoque_inicial, estoque_atual
     if request.method == "POST":
         tipo = request.form.get("tipo")
 
         if tipo == "estoque":
             for item in ["Refletores", "Extensões", "Exaustores"]:
                 qtd = int(request.form.get(item, 0))
-                estoque_inicial[item] = qtd
-                estoque_atual[item] = qtd
+                item_db = ItemEstoque.query.filter_by(nome=item).first()
+                if not item_db:
+                    item_db = ItemEstoque(nome=item, quantidade_inicial=qtd, quantidade_atual=qtd)
+                    db.session.add(item_db)
+                else:
+                    item_db.quantidade_inicial = qtd
+                    item_db.quantidade_atual = qtd
+            db.session.commit()
 
-        elif tipo in ["retirada", "devolucao"]:
-            registro = {
-                "nome": request.form["nome"],
-                "chapa": request.form["chapa"],
-                "area": request.form["area"],
-                "ordem": request.form["ordem"],
-                "itens": {},
-            }
-            chave = (
-                registro["nome"].strip().lower(),
-                registro["chapa"].strip().lower(),
-                registro["area"].strip().lower(),
-                registro["ordem"].strip().lower()
-            )
+        elif tipo == "retirada":
+            nome = request.form["nome"]
+            chapa = request.form["chapa"]
+            area = request.form["area"]
+            ordem = request.form["ordem"]
 
-            if tipo == "devolucao":
-                retiradas_keys = {
-                    (
-                        r["nome"].strip().lower(),
-                        r["chapa"].strip().lower(),
-                        r["area"].strip().lower(),
-                        r["ordem"].strip().lower()
-                    )
-                    for r in retiradas
-                }
-                if chave not in retiradas_keys:
-                    mensagem = f"⚠️ Devolução ignorada: {registro['nome'].title()} (chapa {registro['chapa']}) não possui retirada registrada."
-                    return render_template("index.html", estoque=estoque_atual, mensagem=mensagem)
-                if chave not in retiradas_keys:
-                    print(f"Ignorando devolução de {registro['nome']} - {registro['chapa']}: não há retirada registrada.")
-                    return redirect("/")
+            registro = Registro(tipo="retirada", nome=nome, chapa=chapa, area=area, ordem=ordem)
 
-            for item in ["Refletores", "Extensões", "Exaustores"]:
-                qtd = int(request.form.get(item, 0))
-                if qtd:
-                    registro["itens"][item] = qtd
-                    if item not in estoque_atual:
-                        estoque_atual[item] = 0
-                    estoque_atual[item] -= qtd if tipo == "retirada" else -qtd
+            for item_nome in ["Refletores", "Extensões", "Exaustores"]:
+                qtd = int(request.form.get(item_nome, 0))
+                if qtd > 0:
+                    item_registro = ItemRegistro(nome_item=item_nome, quantidade=qtd)
+                    registro.itens.append(item_registro)
 
-            if tipo == "retirada":
-                retiradas.append(registro)
-            else:
-                devolucoes.append(registro)
+                    item_estoque = ItemEstoque.query.filter_by(nome=item_nome).first()
+                    if item_estoque:
+                        item_estoque.quantidade_atual -= qtd
 
-    return render_template("index.html", estoque=estoque_atual)
+            db.session.add(registro)
+            db.session.commit()
+
+        elif tipo == "devolucao":
+            nome = request.form["nome"]
+            chapa = request.form["chapa"]
+            area = request.form["area"]
+            ordem = request.form["ordem"]
+
+            registro = Registro(tipo="devolucao", nome=nome, chapa=chapa, area=area, ordem=ordem)
+
+            for item_nome in ["Refletores", "Extensões", "Exaustores"]:
+                qtd = int(request.form.get(item_nome, 0))
+                if qtd > 0:
+                    item_registro = ItemRegistro(nome_item=item_nome, quantidade=qtd)
+                    registro.itens.append(item_registro)
+
+                    item_estoque = ItemEstoque.query.filter_by(nome=item_nome).first()
+                    if item_estoque:
+                        item_estoque.quantidade_atual += qtd
+
+            db.session.add(registro)
+            db.session.commit()
+
+        return redirect("/")
+
+    return render_template("index.html")
 
 @app.route("/finalizar")
 def finalizar():
+    registros = Registro.query.order_by(Registro.data.asc()).all()
+    saldo_individual = defaultdict(lambda: defaultdict(int))
     extraviados = defaultdict(int)
-    saldo_individual = {}
 
-    for r in retiradas:
+    for r in registros:
         chave = (
-            r["nome"].strip().lower(),
-            r["chapa"].strip().lower(),
-            r["area"].strip().lower(),
-            r["ordem"].strip().lower()
+            r.nome.strip().lower(),
+            r.chapa.strip().lower(),
+            r.area.strip().lower(),
+            r.ordem.strip().lower()
         )
-        if chave not in saldo_individual:
-            saldo_individual[chave] = defaultdict(int)
-        for item, qtd in r["itens"].items():
-            saldo_individual[chave][item] += qtd
-
-    for d in devolucoes:
-        chave = (
-            d["nome"].strip().lower(),
-            d["chapa"].strip().lower(),
-            d["area"].strip().lower(),
-            d["ordem"].strip().lower()
-        )
-        if chave in saldo_individual:
-            for item, qtd in d["itens"].items():
-                saldo_individual[chave][item] -= qtd
-        else:
-            print(f"Ignorando devolução de {d['nome']} - {d['chapa']} pois não há retirada registrada.")
+        for item in r.itens:
+            if r.tipo == "retirada":
+                saldo_individual[chave][item.nome_item] += item.quantidade
+            elif r.tipo == "devolucao":
+                saldo_individual[chave][item.nome_item] -= item.quantidade
 
     pessoas_nao_devolveram = []
     for chave, itens in saldo_individual.items():
@@ -151,33 +154,23 @@ def finalizar():
 
 @app.route("/dashboard")
 def dashboard():
+    registros = Registro.query.order_by(Registro.data.asc()).all()
+    saldo_individual = defaultdict(lambda: defaultdict(int))
     extraviados = defaultdict(int)
-    saldo_individual = {}
     area_contador = defaultdict(int)
 
-    for r in retiradas:
+    for r in registros:
         chave = (
-            r["nome"].strip().lower(),
-            r["chapa"].strip().lower(),
-            r["area"].strip().lower(),
-            r["ordem"].strip().lower()
+            r.nome.strip().lower(),
+            r.chapa.strip().lower(),
+            r.area.strip().lower(),
+            r.ordem.strip().lower()
         )
-        if chave not in saldo_individual:
-            saldo_individual[chave] = defaultdict(int)
-        for item, qtd in r["itens"].items():
-            saldo_individual[chave][item] += qtd
-
-    for d in devolucoes:
-        chave = (
-            d["nome"].strip().lower(),
-            d["chapa"].strip().lower(),
-            d["area"].strip().lower(),
-            d["ordem"].strip().lower()
-        )
-        if chave not in saldo_individual:
-            saldo_individual[chave] = defaultdict(int)
-        for item, qtd in d["itens"].items():
-            saldo_individual[chave][item] -= qtd
+        for item in r.itens:
+            if r.tipo == "retirada":
+                saldo_individual[chave][item.nome_item] += item.quantidade
+            elif r.tipo == "devolucao":
+                saldo_individual[chave][item.nome_item] -= item.quantidade
 
     pessoas_nao_devolveram = []
     for chave, itens in saldo_individual.items():
@@ -196,62 +189,36 @@ def dashboard():
 
     area_top = max(area_contador.items(), key=lambda x: x[1])[0] if area_contador else "Nenhuma"
 
-    return render_template("dashboard.html", estoque_inicial=estoque_inicial,
-                           estoque_final=estoque_atual,
+    itens_estoque = ItemEstoque.query.all()
+    estoque_final = {item.nome: item.quantidade_atual for item in itens_estoque}
+    estoque_inicial = {item.nome: item.quantidade_inicial for item in itens_estoque}
+
+    return render_template("dashboard.html", 
+                           estoque_inicial=estoque_inicial,
+                           estoque_final=estoque_final,
                            extraviados=extraviados,
                            pessoas=pessoas_nao_devolveram,
                            area_top=area_top)
 
 @app.route("/retiradas_ativas")
 def retiradas_ativas():
-    saldo_individual = {}
+    registros = Registro.query.filter_by(tipo="retirada").order_by(Registro.data.desc()).all()
+    print("Registros encontrados:", registros)
+    return render_template("retiradas_ativas.html", retiradas=registros, zoneinfo=zoneinfo)
 
-    for r in retiradas:
-        chave = (
-            r["nome"].strip().lower(),
-            r["chapa"].strip().lower(),
-            r["area"].strip().lower(),
-            r["ordem"].strip().lower()
-        )
-        if chave not in saldo_individual:
-            saldo_individual[chave] = defaultdict(int)
-        for item, qtd in r["itens"].items():
-            saldo_individual[chave][item] += qtd
-
-    for d in devolucoes:
-        chave = (
-            d["nome"].strip().lower(),
-            d["chapa"].strip().lower(),
-            d["area"].strip().lower(),
-            d["ordem"].strip().lower()
-        )
-        if chave not in saldo_individual:
-            saldo_individual[chave] = defaultdict(int)
-        for item, qtd in d["itens"].items():
-            saldo_individual[chave][item] -= qtd
-
-    retiradas_ativas = []
-    for chave, itens in saldo_individual.items():
-        ativos = {k: v for k, v in itens.items() if v > 0}
-        if ativos:
-            retiradas_ativas.append({
-                "nome": chave[0].title(),
-                "chapa": chave[1],
-                "area": chave[2].title(),
-                "ordem": chave[3],
-                "ativos": ativos
-            })
-
-    return render_template("retiradas_ativas.html", retiradas=retiradas_ativas)
+@app.route("/devolucoes")
+def listar_devolucoes():
+    registros = Registro.query.filter_by(tipo="devolucao").order_by(Registro.data.desc()).all()
+    return render_template("devolucoes.html", registros=registros)  # <-- aqui a correção
 
 @app.route("/resetar", methods=["POST"])
 def resetar():
-    global estoque_inicial, estoque_atual, retiradas, devolucoes
-    estoque_inicial = {}
-    estoque_atual = {}
-    retiradas = []
-    devolucoes = []
+    db.session.query(ItemRegistro).delete()
+    db.session.query(Registro).delete()
+    db.session.query(ItemEstoque).delete()
+    db.session.commit()
     return redirect("/")
+
 
 if __name__ == "__main__":
     app.run(debug=True)
